@@ -8,7 +8,9 @@ from accelerate.utils import InitProcessGroupKwargs, set_seed
 from tqdm import tqdm
 from transformers import set_seed
 # from transformers import AutoModelForCausalLM
+# from transformers import AutoModelForCausalLM, AutoTokenizer
 from model_llama import LlamaForCausalLM
+from model_qwen import Qwen2ForCausalLM
 import transformers
 from flash_attn.losses.cross_entropy import CrossEntropyLoss
 import math
@@ -28,13 +30,12 @@ from easy_context import (
     prepare_seq_parallel_inputs,
     apply_seq_parallel_monkey_patch,
     prepare_dataloader,
-    apply_unsloth_offloaded_gradient_checkpoint_monkey_patch
+    # apply_unsloth_offloaded_gradient_checkpoint_monkey_patch
 )
-apply_unsloth_offloaded_gradient_checkpoint_monkey_patch()
+# apply_unsloth_offloaded_gradient_checkpoint_monkey_patch()
 
 train_data_config = [
-    ("train_slim", 0.693584),
-    ("train_star", 0.306416),
+    ("train_slim", 0.693584)
 ]
 val_data_config = None
 
@@ -149,7 +150,7 @@ def main(args):
         seed=3407,
     )
 
-    model = LlamaForCausalLM.from_pretrained(
+    model = Qwen2ForCausalLM.from_pretrained(
         args.model,
         # device_map=accelerator.device,
         torch_dtype=torch.bfloat16,
@@ -158,7 +159,7 @@ def main(args):
 
 
     model_type = (
-        "llama" if isinstance(model, transformers.LlamaForCausalLM) else "mistral"
+        "llama" if isinstance(model, transformers.Qwen2ForCausalLM) else "mistral"
     )
     apply_seq_parallel_monkey_patch(args.parallel_mode, model_type)
 
@@ -266,7 +267,6 @@ def main(args):
             break
 
     accelerator.print(f"Training Finished")
-    accelerator.end_training()
 
     if args.output_dir is not None:
         accelerator.print(f"Saving model to {args.output_dir}")
@@ -283,6 +283,7 @@ def main(args):
         )
 
         accelerator.print(f"Saving Finished")
+    accelerator.end_training()
 
 
 if __name__ == "__main__":
@@ -294,7 +295,7 @@ if __name__ == "__main__":
     args.add_argument("--seed", type=int, default=42)
     args.add_argument("--max-train-steps", type=int, default=400)
     args.add_argument("--learning-rate", type=float, default=2e-5)
-    args.add_argument("--model", type=str, default="meta-llama/Llama-2-7b-hf")
+    args.add_argument("--model", type=str)
     args.add_argument(
         "--dataset",
         type=str,
